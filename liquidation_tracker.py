@@ -68,9 +68,9 @@ async def ws_connect(endpoint):
                                 dt = dt.replace(microsecond=0)
 
                                 if data['S'] == "BUY":
-                                    print(f"{dt} {data['s']} SHORT liquidated ${int(liq_amount)} {round(abs(percent_liq, 2))}%")
+                                    print(f"{dt} {data['s']} SHORT liquidated ${int(liq_amount)} {abs(round(percent_liq, 2))}%")
                                 else:
-                                    print(f"{dt} {data['s']} LONG liquidated ${int(liq_amount)} {round(abs(percent_liq, 2))}%")
+                                    print(f"{dt} {data['s']} LONG liquidated ${int(liq_amount)} {abs(round(percent_liq, 2))}%")
                                 print()
                                 playsound(SOUND_FILE)
 
