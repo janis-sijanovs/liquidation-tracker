@@ -108,7 +108,9 @@ async def ws_connect(endpoint):
 
                                 print(colored_output)
                                 print()
-                                playsound(SOUND_FILE)
+
+                                if liq_amount >= TRESHOLD:
+                                    playsound(SOUND_FILE)
 
         except Exception as e:
             print(f"Connection error: {e}")
