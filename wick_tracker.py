@@ -1,3 +1,4 @@
+import time
 import aiohttp
 import asyncio
 import requests
@@ -11,13 +12,35 @@ RETRACE_THRESHOLD = 35  # Percentage threshold for retracement
 MIN_CANDLE_PERCENTAGE = 1
 LARGE_CANDLE_PERCENT = 3
 SOUND_FILE = "sounds/wickwickwick.wav"
-LARGE_SOUND_FILE = "sounds/largelarge.wav"
+LARGE_SOUND_FILE = "sounds/liqliqliqliqliq.wav"
+
+EXCEPTIONS = []
 
 message_history = {}
 large_history = {}
 
+COOLDOWN_TIME = 2
+cooldown_start = time.time()
+
 def percentage_diff(high, low):
     return (high - low) * 100 / high
+
+def play_sound(sound_file):
+    global cooldown_start
+    current_time = time.time()
+
+    if current_time - cooldown_start <= COOLDOWN_TIME:
+        return 0
+    
+    cooldown_start = current_time
+
+    try:
+        playsound(sound_file)
+    except Exception as e:
+        print("sound error")
+        print()
+
+
 
 def get_all_usdt_futures_pairs():
     try:
@@ -68,7 +91,7 @@ def calculate_retracement(candlestick):
 
 def check_candle(symbol, candle):
     retracement, direction, candle_percent = calculate_retracement(candle)
-    if candle_percent > LARGE_CANDLE_PERCENT:
+    if abs(candle_percent) > LARGE_CANDLE_PERCENT:
         ts = candle[0]
 
         seconds = ts // 1000
@@ -92,7 +115,7 @@ def check_candle(symbol, candle):
 
 def notify_large(symbol, dt, candle_percent):
     try:
-        if large_history[symbol][0] == dt and large_history[symbol][1] >= candle_percent:
+        if large_history[symbol][0] == dt:
             return 0
     except KeyError:
         pass
@@ -107,7 +130,7 @@ def notify_large(symbol, dt, candle_percent):
     message = f'{dt} \033[35m{symbol}\033[0m Large \033[94m{candle_percent:.2f}%\033[0m Candle'
     print(message)  # Replace with your notification code
     print()
-    playsound(LARGE_SOUND_FILE)
+    play_sound(LARGE_SOUND_FILE)
 
     if symbol not in large_history.keys() or dt > large_history[symbol][0]:
         large_history[symbol] = [dt, candle_percent]
@@ -118,6 +141,9 @@ def notify(symbol, dt, retracement, direction, candle_percent):
             return 0
     except KeyError:
         pass
+
+    if symbol in EXCEPTIONS:
+        return 0
     
     if direction == 'UP':
         color_code = '\033[92m'  # ANSI escape code for green color
@@ -136,7 +162,7 @@ def notify(symbol, dt, retracement, direction, candle_percent):
     message = f'{dt} \033[35m{symbol}\033[0m {color_code}{direction}\033[0m {retracement:.2f}% from {color_percent}{candle_percent:.2f}% \033[0m'
     print(message)  # Replace with your notification code
     print()
-    playsound(SOUND_FILE)
+    play_sound(SOUND_FILE)
 
     
     if symbol not in message_history.keys() or dt > message_history[symbol]:
@@ -156,7 +182,7 @@ async def track_all_pairs():
                 for candle in candlesticks:
                     check_candle(symbol, candle)
 
-        await asyncio.sleep(20)  # Check every 5 seconds
+        await asyncio.sleep(5)  # Check every 5 seconds
 
 if __name__ == '__main__':
     asyncio.run(track_all_pairs())

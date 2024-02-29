@@ -1,17 +1,42 @@
 import asyncio
 from datetime import datetime, timedelta
 import json
+import time
 import traceback
 from playsound import playsound
 import websockets
+
+COOLDOWN_TIME = 2
+cooldown_start = time.time()
 
 TRESHOLD = 10000
 
 MINI_TRESHOLD = 3000
 
-EXCLUDED = ["BTC", "XRP", "SOL", "ETH"]
+EXCLUDED = ["BTC", "SOL", "ETH"]
 
 SOUND_FILE = "sounds/liquidation.wav"
+
+SOUND_NORMAL = "sounds/alarm_normal.mp3"
+SOUND_HIGHER = "sounds/alarm_higher.mp3"
+SOUND_MAX = "sounds/alarm_max.mp3"
+
+
+def play_sound(sound_file):
+    global cooldown_start
+    current_time = time.time()
+
+    if current_time - cooldown_start <= COOLDOWN_TIME:
+        return 0
+    
+    cooldown_start = current_time
+
+    try:
+        playsound(sound_file)
+    except Exception as e:
+        print("sound error")
+        print()
+
 
 def calc_liq_amount(liq_data):
     price = float(liq_data["p"])
@@ -109,8 +134,19 @@ async def ws_connect(endpoint):
                                 print(colored_output)
                                 print()
 
-                                if liq_amount >= TRESHOLD:
-                                    playsound(SOUND_FILE)
+                                if data['s'][:3] not in EXCLUDED:
+
+                                    if liq_amount >= 100000:
+                                        play_sound(SOUND_MAX)
+
+                                    elif liq_amount >= 50000:
+                                        play_sound(SOUND_HIGHER)
+
+                                    elif liq_amount >= 21000:
+                                        play_sound(SOUND_NORMAL)
+                                        
+                                    elif liq_amount >= TRESHOLD or percent_liq > 2.5:
+                                        play_sound(SOUND_FILE)
 
         except Exception as e:
             print(f"Connection error: {e}")
