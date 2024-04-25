@@ -1,18 +1,31 @@
 import time
+import json
 import aiohttp
 import asyncio
 import requests
 from requests.exceptions import HTTPError
-from time import sleep
 from datetime import datetime, timedelta
 from playsound import playsound
+
+FORMAT_STRING = "%d.%m.%Y %H:%M"
+TRENDLINE_DATA_FILE = "trendline_data.json"
+
+def read_trendline_txt():
+    with open(TRENDLINE_DATA_FILE, 'r') as file:
+        trendline_dict = json.load(file)
+    return trendline_dict
+
+trendline_dict = read_trendline_txt()
 
 BASE_URL = 'https://fapi.binance.com'
 RETRACE_THRESHOLD = 35  # Percentage threshold for retracement
 MIN_CANDLE_PERCENTAGE = 1
 LARGE_CANDLE_PERCENT = 3
+TRENDLINE_ALERT_PERCENTAGE = 5
+TRENDLINE_ACTIVATE_PERCENTAGE = 6
 SOUND_FILE = "sounds/wickwickwick.wav"
 LARGE_SOUND_FILE = "sounds/liqliqliqliqliq.wav"
+TRENDLINE_SOUND_FILE = "sounds/trendline.mp3"
 
 EXCEPTIONS = []
 
@@ -26,6 +39,10 @@ def percentage_diff(high, low):
     return (high - low) * 100 / high
 
 def play_sound(sound_file):
+
+    if sound_file == SOUND_FILE:
+        return 0
+
     global cooldown_start
     current_time = time.time()
 
@@ -40,7 +57,33 @@ def play_sound(sound_file):
         print("sound error")
         print()
 
+def interpolate_price(t, t1, p1, t2, p2):
+    return p1 + (p2 - p1) * ((t - t1) / (t2 - t1))
 
+def check_trendlines(symbol, close_price):
+    if not symbol in trendline_dict.keys():
+        return False
+    
+    ts = time.time()
+    
+    trendlines = trendline_dict[symbol]
+    for i, trendline in enumerate(trendlines):
+        t1, p1, t2, p2, active = trendline
+
+        p = interpolate_price(ts, t1, p1, t2, p2)
+        percentage = abs(percentage_diff(close_price, p))
+        if active and percentage <= TRENDLINE_ALERT_PERCENTAGE:
+
+            dt = datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S")
+            message = f'{dt} \033[35m{symbol}\033[0m\033[94m Close to trendline!\033[0m'
+            print(message)
+            print()
+            play_sound(TRENDLINE_SOUND_FILE)
+
+            trendline_dict[symbol][i][4] = False
+
+        elif not active and percentage >= TRENDLINE_ACTIVATE_PERCENTAGE:
+            trendline_dict[symbol][i][4] = True
 
 def get_all_usdt_futures_pairs():
     try:
@@ -90,6 +133,7 @@ def calculate_retracement(candlestick):
 
 
 def check_candle(symbol, candle):
+    check_trendlines(symbol, float(candle[4]))
     retracement, direction, candle_percent = calculate_retracement(candle)
     if abs(candle_percent) > LARGE_CANDLE_PERCENT:
         ts = candle[0]
@@ -184,5 +228,15 @@ async def track_all_pairs():
 
         await asyncio.sleep(5)  # Check every 5 seconds
 
+def run_infinite():
+    try:
+        asyncio.run(track_all_pairs())
+    except KeyboardInterrupt:
+        print("Interrupted")
+        exit(0)
+    # except Exception as e:
+    #     print(e.with_traceback())
+    #     run_infinite()
+
 if __name__ == '__main__':
-    asyncio.run(track_all_pairs())
+    run_infinite()

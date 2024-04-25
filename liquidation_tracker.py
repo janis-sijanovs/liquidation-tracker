@@ -48,6 +48,8 @@ def calc_liq_amount(liq_data):
 
 
 def percentage_difference(old_value, new_value):
+    if old_value == 0:
+        return 0
     difference = new_value - old_value
     percentage_diff = (difference / old_value)
     return percentage_diff * 100
