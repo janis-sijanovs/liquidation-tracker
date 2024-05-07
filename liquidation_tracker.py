@@ -1,6 +1,8 @@
 import asyncio
+import csv
 from datetime import datetime, timedelta
 import json
+import os
 import time
 import traceback
 from playsound import playsound
@@ -20,7 +22,26 @@ SOUND_FILE = "sounds/liquidation.wav"
 SOUND_NORMAL = "sounds/alarm_normal.mp3"
 SOUND_HIGHER = "sounds/alarm_higher.mp3"
 SOUND_MAX = "sounds/alarm_max.mp3"
+SOUND_NEW_SYMBOL = "sounds/symbol.mp3"
 
+SYMBOL_LIST_FILE = "symbol_list.csv"
+
+def read_symbol_list_csv():
+    if os.path.exists(SYMBOL_LIST_FILE):
+        with open(SYMBOL_LIST_FILE, 'r', newline='') as file:
+            reader = csv.reader(file)
+            symbol_list = [symbol for row in reader for symbol in row]
+        print(symbol_list)
+        return symbol_list
+    else:
+        return []
+    
+def write_symbol_list_csv(symbol_list):
+    with open(SYMBOL_LIST_FILE, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerows([symbol_list])
+
+symbol_list = read_symbol_list_csv()
 
 def play_sound(sound_file):
     global cooldown_start
@@ -127,6 +148,12 @@ async def ws_connect(endpoint):
                             dt_base = datetime.fromtimestamp(seconds)
                             dt = dt_base + timedelta(milliseconds=milliseconds)
 
+                            if data['s'][-4:] == "USDT" and data['s'] not in symbol_list:
+                                symbol_list.append(data['s'])
+                                print(f"NEW SYMBOL {data['s']}!")
+                                print()
+                                play_sound(SOUND_NEW_SYMBOL)
+
                             if liq_amount >= TRESHOLD or (liq_amount >= MINI_TRESHOLD and data['s'][:3] not in EXCLUDED):
                                 dt = dt.replace(microsecond=0)
 
@@ -171,4 +198,5 @@ if __name__ == "__main__":
         # Catch a KeyboardInterrupt (e.g., Ctrl+C) to stop the loop gracefully
         print("Received KeyboardInterrupt, stopping the loop...")
     finally:
+        write_symbol_list_csv(symbol_list)
         print("Data fetching disrupted!")

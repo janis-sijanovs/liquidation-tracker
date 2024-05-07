@@ -10,19 +10,19 @@ from playsound import playsound
 FORMAT_STRING = "%d.%m.%Y %H:%M"
 TRENDLINE_DATA_FILE = "trendline_data.json"
 
-def read_trendline_txt():
+def read_trendline_file():
     with open(TRENDLINE_DATA_FILE, 'r') as file:
         trendline_dict = json.load(file)
     return trendline_dict
 
-trendline_dict = read_trendline_txt()
+trendline_dict = read_trendline_file()
 
 BASE_URL = 'https://fapi.binance.com'
 RETRACE_THRESHOLD = 35  # Percentage threshold for retracement
 MIN_CANDLE_PERCENTAGE = 1
 LARGE_CANDLE_PERCENT = 3
-TRENDLINE_ALERT_PERCENTAGE = 5
-TRENDLINE_ACTIVATE_PERCENTAGE = 6
+TRENDLINE_ALERT_PERCENTAGE = 1.5
+TRENDLINE_ACTIVATE_PERCENTAGE = 2.5
 SOUND_FILE = "sounds/wickwickwick.wav"
 LARGE_SOUND_FILE = "sounds/liqliqliqliqliq.wav"
 TRENDLINE_SOUND_FILE = "sounds/trendline.mp3"
@@ -215,7 +215,7 @@ def notify(symbol, dt, retracement, direction, candle_percent):
 async def track_all_pairs():
     symbols = get_all_usdt_futures_pairs()
     if not symbols:
-        return
+        return False
 
     while True:
         tasks = [get_candlestick_data(symbol) for symbol in symbols]
@@ -226,7 +226,7 @@ async def track_all_pairs():
                 for candle in candlesticks:
                     check_candle(symbol, candle)
 
-        await asyncio.sleep(5)  # Check every 5 seconds
+        await asyncio.sleep(15)  # Check every 5 seconds
 
 def run_infinite():
     try:
@@ -234,9 +234,9 @@ def run_infinite():
     except KeyboardInterrupt:
         print("Interrupted")
         exit(0)
-    # except Exception as e:
-    #     print(e.with_traceback())
-    #     run_infinite()
+    except Exception as e:
+        print("error")
+        run_infinite()
 
 if __name__ == '__main__':
     run_infinite()
