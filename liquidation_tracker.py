@@ -31,7 +31,6 @@ def read_symbol_list_csv():
         with open(SYMBOL_LIST_FILE, 'r', newline='') as file:
             reader = csv.reader(file)
             symbol_list = [symbol for row in reader for symbol in row]
-        print(symbol_list)
         return symbol_list
     else:
         return []
@@ -150,7 +149,7 @@ async def ws_connect(endpoint):
 
                             if data['s'][-4:] == "USDT" and data['s'] not in symbol_list:
                                 symbol_list.append(data['s'])
-                                print(f"NEW SYMBOL {data['s']}!")
+                                print(f"NEW SYMBOL \033[35m {data['s']}\033[0m!")
                                 print()
                                 play_sound(SOUND_NEW_SYMBOL)
 
