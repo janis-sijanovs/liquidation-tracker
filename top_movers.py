@@ -28,12 +28,12 @@ def calculate_rate_of_change(symbol):
     # Calculate weighted average rate of change
     weighted_sum = 0
     total_weight = 0
-    for i, price in enumerate(prices):
-        weight = (i + 1) / sum(range(1, len(prices) + 1))  # Weight increases linearly with index
-        if i > 0:
-            weighted_sum += weight * (price - prices[i - 1]) / prices[i - 1]  # Weighted price change
-            total_weight += weight
-    return weighted_sum / total_weight if total_weight != 0 else 0  # Calculate weighted average
+    for i in range(1, len(prices)):
+        weight = i / sum(range(1, len(prices)))  # Weight increases linearly with index
+        price_change = abs(prices[i] - prices[i - 1]) / prices[i - 1]  # Absolute price change
+        weighted_sum += weight * price_change
+        total_weight += weight
+    return weighted_sum / total_weight if total_weight != 0 else 0 
 
 
 def get_top_5_fastest_movers():
