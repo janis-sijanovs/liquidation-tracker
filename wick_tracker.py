@@ -206,7 +206,7 @@ def notify(symbol, dt, retracement, direction, candle_percent):
     message = f'{dt} \033[35m{symbol}\033[0m {color_code}{direction}\033[0m {retracement:.2f}% from {color_percent}{candle_percent:.2f}% \033[0m'
     print(message)  # Replace with your notification code
     print()
-    play_sound(SOUND_FILE)
+    # play_sound(SOUND_FILE)
 
     
     if symbol not in message_history.keys() or dt > message_history[symbol]:
@@ -214,6 +214,10 @@ def notify(symbol, dt, retracement, direction, candle_percent):
 
 async def track_all_pairs():
     symbols = get_all_usdt_futures_pairs()
+    for symbol in symbols:
+        if symbol[:3] == "XEM":
+            symbols.remove(symbol)
+
     if not symbols:
         return False
 

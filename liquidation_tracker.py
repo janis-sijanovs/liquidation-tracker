@@ -15,7 +15,7 @@ TRESHOLD = 10000
 
 MINI_TRESHOLD = 3000
 
-EXCLUDED = ["BTC", "SOL", "ETH"]
+EXCLUDED = ["BTC", "SOL", "ETH", "XEM"]
 
 SOUND_FILE = "sounds/liquidation.wav"
 
@@ -52,7 +52,8 @@ def play_sound(sound_file):
     cooldown_start = current_time
 
     try:
-        playsound(sound_file)
+        pass
+        # playsound(sound_file)
     except Exception as e:
         print("sound error")
         print()
