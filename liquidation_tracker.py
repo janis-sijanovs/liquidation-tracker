@@ -3,8 +3,10 @@ import csv
 from datetime import datetime, timedelta
 import json
 import os
+import re
 import time
 import traceback
+import tempfile
 import simpleaudio as sa
 import websockets
 
@@ -35,10 +37,31 @@ def read_symbol_list_csv():
     else:
         return []
     
+
+def sanitize_symbol(symbol: str) -> str:
+    return re.sub(r'[^A-Za-z0-9+\-._/]', '', symbol)
+
 def write_symbol_list_csv(symbol_list):
-    with open(SYMBOL_LIST_FILE, 'w', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerows([symbol_list])
+    # Clean the symbols before writing
+    clean_list = [sanitize_symbol(s) for s in symbol_list]
+
+    # Create a temporary file in the same directory
+    dir_name = os.path.dirname(SYMBOL_LIST_FILE) or "."
+    fd, temp_path = tempfile.mkstemp(dir=dir_name, prefix="symbols_", suffix=".tmp")
+
+    try:
+        with os.fdopen(fd, "w", newline='', encoding="utf-8") as tmp_file:
+            writer = csv.writer(tmp_file)
+            writer.writerow(clean_list)
+
+        # Only replace original after successful write
+        os.replace(temp_path, SYMBOL_LIST_FILE)
+
+    except Exception as e:
+        # Cleanup temp file on error
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        raise e
 
 symbol_list = read_symbol_list_csv()
 
