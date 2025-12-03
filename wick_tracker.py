@@ -5,7 +5,7 @@ import asyncio
 import requests
 from requests.exceptions import HTTPError
 from datetime import datetime, timedelta
-from playsound import playsound
+import simpleaudio as sa
 
 FORMAT_STRING = "%d.%m.%Y %H:%M"
 TRENDLINE_DATA_FILE = "trendline_data.json"
@@ -23,9 +23,10 @@ MIN_CANDLE_PERCENTAGE = 1
 LARGE_CANDLE_PERCENT = 3
 TRENDLINE_ALERT_PERCENTAGE = 1.5
 TRENDLINE_ACTIVATE_PERCENTAGE = 2.5
-SOUND_FILE = "sounds/wickwickwick.wav"
-LARGE_SOUND_FILE = "sounds/liqliqliqliqliq.wav"
-TRENDLINE_SOUND_FILE = "sounds/trendline.mp3"
+SOUND_FILE = "sounds/wick.wav"
+LARGE_SOUND_FILE = "sounds/liq.wav"
+TRENDLINE_SOUND_FILE = "sounds/trendline.wav"
+WARNING_SOUND_FILE = "sounds/warn.wav"
 
 EXCEPTIONS = []
 
@@ -39,23 +40,21 @@ def percentage_diff(high, low):
     return (high - low) * 100 / high
 
 def play_sound(sound_file):
-
-    if sound_file == SOUND_FILE:
-        return 0
-
     global cooldown_start
     current_time = time.time()
 
+    # cooldown
     if current_time - cooldown_start <= COOLDOWN_TIME:
-        return 0
-    
+        return
+
     cooldown_start = current_time
 
     try:
-        playsound(sound_file)
+        wave_obj = sa.WaveObject.from_wave_file(sound_file)
+        wave_obj.play()
     except Exception as e:
-        print("sound error")
-        print()
+        print(f"Sound error: {e}")
+
 
 def interpolate_price(t, t1, p1, t2, p2):
     return p1 + (p2 - p1) * ((t - t1) / (t2 - t1))
@@ -102,9 +101,9 @@ async def get_candlestick_data(symbol, interval='1m'):
             async with session.get(f'{BASE_URL}/fapi/v1/klines', params=params) as response:
                 response.raise_for_status()
                 return await response.json()
-    except HTTPError as e:
-        print(f'Error getting candlestick data for {symbol}: {e}')
-        return None
+    except Exception as e:
+        print(f"Error for {symbol}: {e}")
+        return None   # Safe value
 
 def calculate_retracement(candlestick):
     if not len(candlestick):
@@ -214,18 +213,24 @@ def notify(symbol, dt, retracement, direction, candle_percent):
 
 async def track_all_pairs():
     symbols = get_all_usdt_futures_pairs()
-    for symbol in symbols:
-        if symbol[:3] == "XEM":
-            symbols.remove(symbol)
+
+    EXCLUDE = {"BTCSTUSDT", "GAIBUSDT"}
+
+    symbols = [s for s in symbols if s not in EXCLUDE]
+
 
     if not symbols:
+        print("no symbols!")
         return False
 
     while True:
         tasks = [get_candlestick_data(symbol) for symbol in symbols]
-        candlesticks_list = await asyncio.gather(*tasks)
+        candlesticks_list = await asyncio.gather(*tasks, return_exceptions=True)
 
         for symbol, candlesticks in zip(symbols, candlesticks_list):
+            if not candlesticks or len(candlesticks) < 2:
+                continue
+
             if len(candlesticks) >= 2:
                 for candle in candlesticks:
                     check_candle(symbol, candle)
@@ -239,8 +244,12 @@ def run_infinite():
         print("Interrupted")
         exit(0)
     except Exception as e:
-        print("error")
-        run_infinite()
+        print(e)
+        play_sound(WARNING_SOUND_FILE)
+        exit(1)
 
 if __name__ == '__main__':
-    run_infinite()
+    try:
+        asyncio.run(track_all_pairs())
+    except KeyboardInterrupt:
+        print("Interrupted")

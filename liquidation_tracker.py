@@ -5,7 +5,7 @@ import json
 import os
 import time
 import traceback
-from playsound import playsound
+import simpleaudio as sa
 import websockets
 
 COOLDOWN_TIME = 2
@@ -19,10 +19,10 @@ EXCLUDED = ["BTC", "SOL", "ETH", "XEM"]
 
 SOUND_FILE = "sounds/liquidation.wav"
 
-SOUND_NORMAL = "sounds/alarm_normal.mp3"
-SOUND_HIGHER = "sounds/alarm_higher.mp3"
-SOUND_MAX = "sounds/alarm_max.mp3"
-SOUND_NEW_SYMBOL = "sounds/symbol.mp3"
+SOUND_NORMAL = "sounds/alarm_normal.wav"
+SOUND_HIGHER = "sounds/alarm_higher.wav"
+SOUND_MAX = "sounds/alarm_max.wav"
+SOUND_NEW_SYMBOL = "sounds/symbol.wav"
 
 SYMBOL_LIST_FILE = "symbol_list.csv"
 
@@ -46,17 +46,17 @@ def play_sound(sound_file):
     global cooldown_start
     current_time = time.time()
 
+    # cooldown
     if current_time - cooldown_start <= COOLDOWN_TIME:
-        return 0
-    
+        return
+
     cooldown_start = current_time
 
     try:
-        pass
-        # playsound(sound_file)
+        wave_obj = sa.WaveObject.from_wave_file(sound_file)
+        wave_obj.play()
     except Exception as e:
-        print("sound error")
-        print()
+        print(f"Sound error: {e}")
 
 
 def calc_liq_amount(liq_data):
